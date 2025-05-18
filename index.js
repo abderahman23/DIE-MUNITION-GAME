@@ -1,573 +1,574 @@
   // Oyun başlatma
-  const canvas = document.getElementById('gameCanvas');
-  const ctx = canvas.getContext('2d');
-  const healthDisplay = document.getElementById('health');
-  const scoreDisplay = document.getElementById('score');
-  const weaponDisplay = document.getElementById('weapon');
-  const ammoDisplay = document.getElementById('ammo');
-  const gameOverScreen = document.getElementById('gameOver');
-  const winScreen = document.getElementById('winScreen');
-  const finalScoreDisplay = document.getElementById('finalScore');
-  const winScoreDisplay = document.getElementById('winScore');
-  const restartBtn = document.getElementById('restartBtn');
-  const winRestartBtn = document.getElementById('winRestartBtn');
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const healthDisplay = document.getElementById('health');
+        const scoreDisplay = document.getElementById('score');
+        const weaponDisplay = document.getElementById('weapon');
+        const ammoDisplay = document.getElementById('ammo');
+        const gameOverScreen = document.getElementById('gameOver');
+        const winScreen = document.getElementById('winScreen');
+        const finalScoreDisplay = document.getElementById('finalScore');
+        const winScoreDisplay = document.getElementById('winScore');
+        const restartBtn = document.getElementById('restartBtn');
+        const winRestartBtn = document.getElementById('winRestartBtn');
+        const musicToggle = document.getElementById('musicToggle');
+        const backgroundMusic = document.getElementById('backgroundMusic');
 
-  // Ses kontrol fonksiyonları
-  function playSound(id, volume = 1.0) {
-      const sound = document.getElementById(id);
-      sound.currentTime = 0; // Sesi başa sar
-      sound.volume = volume;
-      sound.play().catch(e => console.log("Ses oynatma hatası:", e));
-  }
+        // Müzik kontrolü
+        let musicEnabled = true;
+        
+        function playBackgroundMusic() {
+            if (musicEnabled) {
+                backgroundMusic.volume = 0.3;
+                backgroundMusic.play().catch(e => console.log("Müzik çalma hatası:", e));
+            }
+        }
+        
+        function stopBackgroundMusic() {
+            backgroundMusic.pause();
+            backgroundMusic.currentTime = 0;
+        }
+        
+        musicToggle.addEventListener('click', () => {
+            musicEnabled = !musicEnabled;
+            if (musicEnabled) {
+                playBackgroundMusic();
+                musicToggle.textContent = "Müzik: Açık";
+            } else {
+                stopBackgroundMusic();
+                musicToggle.textContent = "Müzik: Kapalı";
+            }
+        });
 
-  //  düşman görseli 
-  const enemyImage = new Image();
-  enemyImage.src = 'dusman.webp';
-  let enemyImageLoaded = false;
-  enemyImage.onload = function() {
-      enemyImageLoaded = true;
-      document.getElementById('enemyImageStatus').textContent = "Düşman görseli: Yüklendi";
-      console.log("Düşman görseli yüklendi");
-  };
-  enemyImage.onerror = function() {
-      document.getElementById('enemyImageStatus').textContent = "Düşman görseli: Bulunamadı!";
-      console.error("Düşman görseli yüklenemedi! Yedek çizim kullanılacak.");
-  };
+        // Ses kontrol fonksiyonu
+        function playSound(id, volume = 1.0) {
+            const sound = document.getElementById(id);
+            sound.currentTime = 0;
+            sound.volume = volume;
+            sound.play().catch(e => console.log("Ses oynatma hatası:", e));
+        }
 
-  // Basit düşman görseli oluştur
-  function createBasicEnemyImage() {
-      const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = 100;
-      tempCanvas.height = 100;
-      const tempCtx = tempCanvas.getContext('2d');
-      
-      // Koyu daire çiz
-      tempCtx.beginPath();
-      tempCtx.arc(50, 50, 40, 0, Math.PI * 2);
-      tempCtx.fillStyle = '#34495e';
-      tempCtx.fill();
-      
-      // Düşman işareti ekle
-      tempCtx.beginPath();
-      tempCtx.moveTo(30, 30);
-      tempCtx.lineTo(70, 70);
-      tempCtx.moveTo(70, 30);
-      tempCtx.lineTo(30, 70);
-      tempCtx.strokeStyle = '#e74c3c';
-      tempCtx.lineWidth = 6;
-      tempCtx.stroke();
-      
-      const img = new Image();
-      img.src = tempCanvas.toDataURL();
-      return img;
-  }
+        // Düşman görseli 
+        const enemyImage = new Image();
+        enemyImage.src = 'dusman.webp';
+        let enemyImageLoaded = false;
+        enemyImage.onload = function() {
+            enemyImageLoaded = true;
+            document.getElementById('enemyImageStatus').textContent = "Düşman görseli: Yüklendi";
+            console.log("Düşman görseli yüklendi");
+        };
+        enemyImage.onerror = function() {
+            document.getElementById('enemyImageStatus').textContent = "Düşman görseli: Bulunamadı!";
+            console.error("Düşman görseli yüklenemedi! Yedek çizim kullanılacak.");
+        };
 
-  // Yedek düşman görseli oluştur
-  const backupEnemyImage = createBasicEnemyImage();
-  
-  const state = {
-      gameRunning: true,
-      score: 0,
-      enemy: null,
-      bullets: [],
-      particles: [],
-      powerups: [],
-      lastEnemySpawnTime: 0,
-      enemySpawnDelay: 1000
-  };
+        // Basit düşman görseli oluşturma
+        function createBasicEnemyImage() {
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = 100;
+            tempCanvas.height = 100;
+            const tempCtx = tempCanvas.getContext('2d');
+            
+            tempCtx.beginPath();
+            tempCtx.arc(50, 50, 40, 0, Math.PI * 2);
+            tempCtx.fillStyle = '#34495e';
+            tempCtx.fill();
+            
+            tempCtx.beginPath();
+            tempCtx.moveTo(30, 30);
+            tempCtx.lineTo(70, 70);
+            tempCtx.moveTo(70, 30);
+            tempCtx.lineTo(30, 70);
+            tempCtx.strokeStyle = '#e74c3c';
+            tempCtx.lineWidth = 6;
+            tempCtx.stroke();
+            
+            const img = new Image();
+            img.src = tempCanvas.toDataURL();
+            return img;
+        }
 
-  // Oyuncu özellikleri
-  const player = {
-      x: canvas.width / 2,
-      y: canvas.height / 2,
-      radius: 20,
-      speed: 5,
-      health: 100,
-      maxHealth: 100,
-      color: '#3498db',
-      weapon: 'pistol',
-      ammo: Infinity,
-      lastShot: 0,
-      direction: { x: 0, y: 1 }
-  };
+        const backupEnemyImage = createBasicEnemyImage();
+        
+        const state = {
+            gameRunning: true,
+            score: 0,
+            enemy: null,
+            bullets: [],
+            particles: [],
+            powerups: [],
+            lastEnemySpawnTime: 0,
+            enemySpawnDelay: 1000
+        };
 
-  // Silah özellikleri
-  const weapons = {
-      pistol: {
-          name: 'Pistol',
-          damage: 10,
-          speed: 10,
-          size: 5,
-          color: '#f1c40f',
-          ammo: Infinity,
-          delay: 200,
-          spread: 0.1
-      },
-      shotgun: {
-          name: 'Shotgun',
-          damage: 5,
-          speed: 8,
-          size: 4,
-          color: '#e67e22',
-          ammo: 30,
-          delay: 500,
-          spread: 0.3,
-          pellets: 5
-      },
-      machinegun: {
-          name: 'Machine Gun',
-          damage: 3,
-          speed: 12,
-          size: 4,
-          color: '#2ecc71',
-          ammo: 100,
-          delay: 100,
-          spread: 0.2
-      }
-  };
+        // Oyuncu özellikleri
+        const player = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            radius: 20,
+            speed: 5,
+            health: 100,
+            maxHealth: 100,
+            color: '#3498db',
+            weapon: 'pistol',
+            ammo: Infinity,
+            lastShot: 0,
+            direction: { x: 0, y: 1 }
+        };
 
-  // Düşman özellikleri
-  const enemyType = {
-      radius: 25,
-      speed: 0.8,
-      health: 100,
-      color: '#34495e',
-      score: 30
-  };
+        // Silah özellikleri
+        const weapons = {
+            pistol: {
+                name: 'Pistol',
+                damage: 10,
+                speed: 10,
+                size: 5,
+                color: '#f1c40f',
+                ammo: Infinity,
+                delay: 200,
+                spread: 0.1
+            },
+            shotgun: {
+                name: 'Shotgun',
+                damage: 5,
+                speed: 8,
+                size: 4,
+                color: '#e67e22',
+                ammo: 30,
+                delay: 500,
+                spread: 0.3,
+                pellets: 5
+            },
+            machinegun: {
+                name: 'Machine Gun',
+                damage: 3,
+                speed: 12,
+                size: 4,
+                color: '#2ecc71',
+                ammo: 100,
+                delay: 100,
+                spread: 0.2
+            }
+        };
 
-  // Giriş kontrolü
-  const keys = {
-      w: false,
-      a: false,
-      s: false,
-      d: false
-  };
+        // Düşman özellikleri
+        const enemyType = {
+            radius: 25,
+            speed: 0.8,
+            health: 100,
+            color: '#34495e',
+            score: 30
+        };
 
-  // Klavye olayları
-  document.addEventListener('keydown', (e) => {
-      const key = e.key.toLowerCase();
-      if (keys.hasOwnProperty(key)) keys[key] = true;
-      
-      // Silah değiştirme - Silah değiştirildiğinde ammo değerini güncelle
-      if (key === '1' && player.weapon !== 'pistol') {
-          player.weapon = 'pistol';
-          player.ammo = weapons.pistol.ammo;
-      }
-      if (key === '2' && player.weapon !== 'shotgun') {
-          player.weapon = 'shotgun';
-          player.ammo = weapons.shotgun.ammo;
-      }
-      if (key === '3' && player.weapon !== 'machinegun') {
-          player.weapon = 'machinegun';
-          player.ammo = weapons.machinegun.ammo;
-      }
-      
-      if (!state.gameRunning && key === 'r') restartGame();
-  });
+        // Giriş kontrolü
+        const keys = {
+            w: false,
+            a: false,
+            s: false,
+            d: false
+        };
 
-  document.addEventListener('keyup', (e) => {
-      const key = e.key.toLowerCase();
-      if (keys.hasOwnProperty(key)) keys[key] = false;
-  });
+        // Klavye olayları
+        document.addEventListener('keydown', (e) => {
+            const key = e.key.toLowerCase();
+            if (keys.hasOwnProperty(key)) keys[key] = true;
+            
+            if (key === '1' && player.weapon !== 'pistol') {
+                player.weapon = 'pistol';
+                player.ammo = weapons.pistol.ammo;
+            }
+            if (key === '2' && player.weapon !== 'shotgun') {
+                player.weapon = 'shotgun';
+                player.ammo = weapons.shotgun.ammo;
+            }
+            if (key === '3' && player.weapon !== 'machinegun') {
+                player.weapon = 'machinegun';
+                player.ammo = weapons.machinegun.ammo;
+            }
+            
+            if (!state.gameRunning && key === 'r') restartGame();
+        });
 
-  // Fare olayları
-  canvas.addEventListener('mousemove', (e) => {
-      if (!state.gameRunning) return;
-      
-      const rect = canvas.getBoundingClientRect();
-      const mouseX = e.clientX - rect.left;
-      const mouseY = e.clientY - rect.top;
-      
-      const dx = mouseX - player.x;
-      const dy = mouseY - player.y;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-      
-      if (distance > 0) {
-          player.direction = {
-              x: dx / distance,
-              y: dy / distance
-          };
-      }
-  });
+        document.addEventListener('keyup', (e) => {
+            const key = e.key.toLowerCase();
+            if (keys.hasOwnProperty(key)) keys[key] = false;
+        });
 
-  canvas.addEventListener('mousedown', (e) => {
-      if (state.gameRunning) shoot();
-  });
+        // Fare olayları
+        canvas.addEventListener('mousemove', (e) => {
+            if (!state.gameRunning) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            
+            const dx = mouseX - player.x;
+            const dy = mouseY - player.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance > 0) {
+                player.direction = {
+                    x: dx / distance,
+                    y: dy / distance
+                };
+            }
+        });
 
-  // Yeniden başlatma butonu
-  restartBtn.addEventListener('click', restartGame);
-  winRestartBtn.addEventListener('click', restartGame);
+        canvas.addEventListener('mousedown', (e) => {
+            if (state.gameRunning) shoot();
+        });
 
-  // Düşman oluştur
-  function spawnEnemy() {
-      if (!state.gameRunning) return;
-      
-      const now = Date.now();
-      if (now - state.lastEnemySpawnTime < state.enemySpawnDelay) return;
-      
-      state.lastEnemySpawnTime = now;
-      
-      let x, y;
-      if (Math.random() < 0.5) {
-          x = Math.random() < 0.5 ? -20 : canvas.width + 20;
-          y = Math.random() * canvas.height;
-      } else {
-          x = Math.random() * canvas.width;
-          y = Math.random() < 0.5 ? -20 : canvas.height + 20;
-      }
-      
-      state.enemy = {
-          ...enemyType,
-          x,
-          y,
-          originalColor: enemyType.color,
-          health: enemyType.health // Ensure health is explicitly set
-      };
-  }
+        // Yeniden başlatma düğmesi
+        restartBtn.addEventListener('click', restartGame);
+        winRestartBtn.addEventListener('click', restartGame);
 
-  // Ateş etme
-  function shoot() {
-      if (!state.gameRunning) return;
-      
-      const now = Date.now();
-      const weapon = weapons[player.weapon];
-      
-      if (now - player.lastShot < weapon.delay) return;
-      player.lastShot = now;
-      
-      if (weapon.ammo !== Infinity) {
-          if (player.ammo <= 0) return;
-          player.ammo--;
-      }
-      
-      // Silah sesini çal
-      if (player.weapon === 'pistol') {
-          playSound('shootSound', 0.7);
-      } else if (player.weapon === 'shotgun') {
-          playSound('shootSound', 0.9);
-      } else {
-          playSound('shootSound', 0.5);
-      }
-      
-      if (player.weapon === 'shotgun') {
-          for (let i = 0; i < weapon.pellets; i++) {
-              createBullet(weapon.spread);
-          }
-      } else {
-          createBullet(weapon.spread);
-      }
-      
-      createMuzzleFlash();
-  }
+        // Düşman oluştur
+        function spawnEnemy() {
+            if (!state.gameRunning) return;
+            
+            const now = Date.now();
+            if (now - state.lastEnemySpawnTime < state.enemySpawnDelay) return;
+            
+            state.lastEnemySpawnTime = now;
+            
+            let x, y;
+            if (Math.random() < 0.5) {
+                x = Math.random() < 0.5 ? -20 : canvas.width + 20;
+                y = Math.random() * canvas.height;
+            } else {
+                x = Math.random() * canvas.width;
+                y = Math.random() < 0.5 ? -20 : canvas.height + 20;
+            }
+            
+            state.enemy = {
+                ...enemyType,
+                x,
+                y,
+                originalColor: enemyType.color,
+                health: enemyType.health
+            };
+        }
 
-  function createBullet(spread) {
-      const angle = Math.atan2(player.direction.y, player.direction.x);
-      const spreadAngle = (Math.random() - 0.5) * spread * Math.PI;
-      
-      state.bullets.push({
-          x: player.x,
-          y: player.y,
-          dx: Math.cos(angle + spreadAngle) * weapons[player.weapon].speed,
-          dy: Math.sin(angle + spreadAngle) * weapons[player.weapon].speed,
-          radius: weapons[player.weapon].size,
-          damage: weapons[player.weapon].damage,
-          color: weapons[player.weapon].color
-      });
-  }
+        // Ateş etme
+        function shoot() {
+            if (!state.gameRunning) return;
+            
+            const now = Date.now();
+            const weapon = weapons[player.weapon];
+            
+            if (now - player.lastShot < weapon.delay) return;
+            player.lastShot = now;
+            
+            if (weapon.ammo !== Infinity) {
+                if (player.ammo <= 0) return;
+                player.ammo--;
+            }
+            
+            if (player.weapon === 'pistol') {
+                playSound('shootSound', 0.7);
+            } else if (player.weapon === 'shotgun') {
+                playSound('shootSound', 0.9);
+            } else {
+                playSound('shootSound', 0.5);
+            }
+            
+            if (player.weapon === 'shotgun') {
+                for (let i = 0; i < weapon.pellets; i++) {
+                    createBullet(weapon.spread);
+                }
+            } else {
+                createBullet(weapon.spread);
+            }
+            
+            createMuzzleFlash();
+        }
 
-  function createMuzzleFlash() {
-      for (let i = 0; i < 5; i++) {
-          const angle = Math.atan2(player.direction.y, player.direction.x);
-          const spreadAngle = (Math.random() - 0.5) * 0.5 * Math.PI;
-          
-          state.particles.push({
-              x: player.x + player.direction.x * player.radius,
-              y: player.y + player.direction.y * player.radius,
-              dx: Math.cos(angle + spreadAngle) * (2 + Math.random() * 3),
-              dy: Math.sin(angle + spreadAngle) * (2 + Math.random() * 3),
-              radius: 2 + Math.random() * 4,
-              rotation: Math.random() * Math.PI * 2,
-              rotationSpeed: (Math.random() - 0.5) * 0.2,
-              color: '#f39c12',
-              life: 10 + Math.random() * 10,
-              isExplosion: true
-          });
-      }
-  }
+        function createBullet(spread) {
+            const angle = Math.atan2(player.direction.y, player.direction.x);
+            const spreadAngle = (Math.random() - 0.5) * spread * Math.PI;
+            
+            state.bullets.push({
+                x: player.x,
+                y: player.y,
+                dx: Math.cos(angle + spreadAngle) * weapons[player.weapon].speed,
+                dy: Math.sin(angle + spreadAngle) * weapons[player.weapon].speed,
+                radius: weapons[player.weapon].size,
+                damage: weapons[player.weapon].damage,
+                color: weapons[player.weapon].color
+            });
+        }
 
-  // Çarpışma kontrolü
-  function checkCollisions() {
-      // Düşman yoksa hemen dön
-      if (!state.enemy) return;
-      
-      // Mermi-düşman çarpışması
-      for (let i = state.bullets.length - 1; i >= 0; i--) {
-          const bullet = state.bullets[i];
-          const dx = bullet.x - state.enemy.x;
-          const dy = bullet.y - state.enemy.y;
-          const distance = Math.sqrt(dx * dx + dy * dy);
-          
-          if (distance < bullet.radius + state.enemy.radius) {
-              state.enemy.health -= bullet.damage;
-              state.bullets.splice(i, 1);
-              createBloodEffect(state.enemy.x, state.enemy.y, state.enemy.radius);
-              
-              // Vurulma sesi
-              playSound('enemyHitSound', 0.6);
-              
-              if (state.enemy.health <= 0) {
-                  state.score += state.enemy.score;
-                  state.enemy = null;
-                  
-                  if (state.score >= 300) { // Kazanma skorunu 300'e düşürdük
-                      winGame();
-                      return;
-                  }
-                  break; // Düşman yokken daha fazla işlem yapma
-              } else {
-                  state.enemy.color = '#ffffff';
-                  setTimeout(() => {
-                      if (state.enemy) state.enemy.color = state.enemy.originalColor;
-                  }, 100);
-              }
-          }
-      }
-      
-      // Düşman silindiyse buradan sonrasını çalıştırma
-      if (!state.enemy) return;
-      
-      // Oyuncu-düşman çarpışması
-      const dx = player.x - state.enemy.x;
-      const dy = player.y - state.enemy.y;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-      
-      if (distance < player.radius + state.enemy.radius) {
-          player.health -= 2;
-          createBloodEffect(state.enemy.x, state.enemy.y, state.enemy.radius);
-          
-          // Oyuncu vurulma sesi
-          playSound('hitSound', 0.5);
-          
-          if (player.health <= 0) {
-              gameOver();
-          }
-      }
-  }
+        function createMuzzleFlash() {
+            for (let i = 0; i < 5; i++) {
+                const angle = Math.atan2(player.direction.y, player.direction.x);
+                const spreadAngle = (Math.random() - 0.5) * 0.5 * Math.PI;
+                
+                state.particles.push({
+                    x: player.x + player.direction.x * player.radius,
+                    y: player.y + player.direction.y * player.radius,
+                    dx: Math.cos(angle + spreadAngle) * (2 + Math.random() * 3),
+                    dy: Math.sin(angle + spreadAngle) * (2 + Math.random() * 3),
+                    radius: 2 + Math.random() * 4,
+                    rotation: Math.random() * Math.PI * 2,
+                    rotationSpeed: (Math.random() - 0.5) * 0.2,
+                    color: '#f39c12',
+                    life: 10 + Math.random() * 10,
+                    isExplosion: true
+                });
+            }
+        }
 
-  function createBloodEffect(x, y, size) {
-      for (let i = 0; i < size * 2; i++) {
-          state.particles.push({
-              x,
-              y,
-              dx: (Math.random() - 0.5) * 3,
-              dy: (Math.random() - 0.5) * 3,
-              radius: 1 + Math.random() * 3,
-              color: '#c0392b',
-              life: 20 + Math.random() * 20
-          });
-      }
-  }
+        // Çarpışma kontrolması
+        function checkCollisions() {
+            if (!state.enemy) return;
+            
+            for (let i = state.bullets.length - 1; i >= 0; i--) {
+                const bullet = state.bullets[i];
+                const dx = bullet.x - state.enemy.x;
+                const dy = bullet.y - state.enemy.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance < bullet.radius + state.enemy.radius) {
+                    state.enemy.health -= bullet.damage;
+                    state.bullets.splice(i, 1);
+                    createBloodEffect(state.enemy.x, state.enemy.y, state.enemy.radius);
+                    
+                    playSound('enemyHitSound', 0.6);
+                    
+                    if (state.enemy.health <= 0) {
+                        state.score += state.enemy.score;
+                        state.enemy = null;
+                        
+                        if (state.score >= 300) {
+                            winGame();
+                            return;
+                        }
+                        break;
+                    } else {
+                        state.enemy.color = '#ffffff';
+                        setTimeout(() => {
+                            if (state.enemy) state.enemy.color = state.enemy.originalColor;
+                        }, 100);
+                    }
+                }
+            }
+            
+            if (!state.enemy) return;
+            
+            const dx = player.x - state.enemy.x;
+            const dy = player.y - state.enemy.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance < player.radius + state.enemy.radius) {
+                player.health -= 2;
+                createBloodEffect(state.enemy.x, state.enemy.y, state.enemy.radius);
+                
+                playSound('hitSound', 0.5);
+                
+                if (player.health <= 0) {
+                    gameOver();
+                }
+            }
+        }
 
-  // Oyun güncelleme
-  function update() {
-      if (!state.gameRunning) return;
-      
-      // Oyuncu hareketi
-      const moveX = (keys.d ? 1 : 0) - (keys.a ? 1 : 0);
-      const moveY = (keys.s ? 1 : 0) - (keys.w ? 1 : 0);
-      
-      if (moveX !== 0 || moveY !== 0) {
-          const length = Math.sqrt(moveX * moveX + moveY * moveY);
-          player.x += (moveX / length) * player.speed;
-          player.y += (moveY / length) * player.speed;
-          
-          player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x));
-          player.y = Math.max(player.radius, Math.min(canvas.height - player.radius, player.y));
-      }
-      
-      // Düşman hareketi
-      if (state.enemy) {
-          const dx = player.x - state.enemy.x;
-          const dy = player.y - state.enemy.y;
-          const distance = Math.sqrt(dx * dx + dy * dy);
-          
-          if (distance > 0) {
-              state.enemy.x += (dx / distance) * state.enemy.speed;
-              state.enemy.y += (dy / distance) * state.enemy.speed;
-          }
-      }
-      
-      // Mermi hareketi
-      for (let i = state.bullets.length - 1; i >= 0; i--) {
-          const bullet = state.bullets[i];
-          bullet.x += bullet.dx;
-          bullet.y += bullet.dy;
-          
-          if (bullet.x < -50 || bullet.x > canvas.width + 50 ||
-              bullet.y < -50 || bullet.y > canvas.height + 50) {
-              state.bullets.splice(i, 1);
-          }
-      }
-      
-      // Parçacık hareketi
-      for (let i = state.particles.length - 1; i >= 0; i--) {
-          const particle = state.particles[i];
-          particle.x += particle.dx;
-          particle.y += particle.dy;
-          particle.life--;
-          
-          if (particle.life <= 0) {
-              state.particles.splice(i, 1);
-          }
-      }
-      
-      // Düşman spawn
-      if (!state.enemy) {
-          spawnEnemy();
-      }
-      
-      // Çarpışma kontrolü
-      checkCollisions();
-      
-      // UI güncelleme
-      updateUI();
-  }
+        function createBloodEffect(x, y, size) {
+            for (let i = 0; i < size * 2; i++) {
+                state.particles.push({
+                    x,
+                    y,
+                    dx: (Math.random() - 0.5) * 3,
+                    dy: (Math.random() - 0.5) * 3,
+                    radius: 1 + Math.random() * 3,
+                    color: '#c0392b',
+                    life: 20 + Math.random() * 20
+                });
+            }
+        }
 
-  function updateUI() {
-      healthDisplay.textContent = `Health: ${Math.max(0, Math.floor(player.health))}%`;
-      scoreDisplay.textContent = `Score: ${state.score}`;
-      weaponDisplay.textContent = `Weapon: ${weapons[player.weapon].name}`;
-      
-      // Doğru mermi gösterimi
-      if (player.weapon === 'pistol') {
-          ammoDisplay.textContent = `Ammo: ∞`;
-      } else {
-          ammoDisplay.textContent = `Ammo: ${player.ammo}`;
-      }
-  }
+        // Oyun güncellemesi
+        function update() {
+            if (!state.gameRunning) return;
+            
+            const moveX = (keys.d ? 1 : 0) - (keys.a ? 1 : 0);
+            const moveY = (keys.s ? 1 : 0) - (keys.w ? 1 : 0);
+            
+            if (moveX !== 0 || moveY !== 0) {
+                const length = Math.sqrt(moveX * moveX + moveY * moveY);
+                player.x += (moveX / length) * player.speed;
+                player.y += (moveY / length) * player.speed;
+                
+                player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x));
+                player.y = Math.max(player.radius, Math.min(canvas.height - player.radius, player.y));
+            }
+            
+            if (state.enemy) {
+                const dx = player.x - state.enemy.x;
+                const dy = player.y - state.enemy.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance > 0) {
+                    state.enemy.x += (dx / distance) * state.enemy.speed;
+                    state.enemy.y += (dy / distance) * state.enemy.speed;
+                }
+            }
+            
+            for (let i = state.bullets.length - 1; i >= 0; i--) {
+                const bullet = state.bullets[i];
+                bullet.x += bullet.dx;
+                bullet.y += bullet.dy;
+                
+                if (bullet.x < -50 || bullet.x > canvas.width + 50 ||
+                    bullet.y < -50 || bullet.y > canvas.height + 50) {
+                    state.bullets.splice(i, 1);
+                }
+            }
+            
+            for (let i = state.particles.length - 1; i >= 0; i--) {
+                const particle = state.particles[i];
+                particle.x += particle.dx;
+                particle.y += particle.dy;
+                particle.life--;
+                
+                if (particle.life <= 0) {
+                    state.particles.splice(i, 1);
+                }
+            }
+            
+            if (!state.enemy) {
+                spawnEnemy();
+            }
+            
+            checkCollisions();
+            updateUI();
+        }
 
-  // Çizim fonksiyonları
-  function draw() {
-      ctx.fillStyle = '#222';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      
-      // Oyuncu çizimi (küre olarak)
-      ctx.save();
-      ctx.translate(player.x, player.y);
-      
-      // Küre çizimi
-      ctx.beginPath();
-      ctx.arc(0, 0, player.radius, 0, Math.PI * 2);
-      ctx.fillStyle = player.color;
-      ctx.fill();
-      
-      // Oyuncunun yönünü gösteren küçük üçgen
-      const angle = Math.atan2(player.direction.y, player.direction.x);
-      ctx.beginPath();
-      ctx.moveTo(player.radius * Math.cos(angle), player.radius * Math.sin(angle));
-      ctx.lineTo(player.radius * Math.cos(angle + 2.5), player.radius * Math.sin(angle + 2.5));
-      ctx.lineTo(player.radius * Math.cos(angle - 2.5), player.radius * Math.sin(angle - 2.5));
-      ctx.closePath();
-      ctx.fillStyle = "#ffffff";
-      ctx.fill();
-      
-      ctx.restore();
-      
-      // Düşman çizimi
-      if (state.enemy) {
-          ctx.save();
-          ctx.translate(state.enemy.x, state.enemy.y);
-          
-          if (enemyImageLoaded) {
-              // Görsel yüklendiyse görseli çiz
-              ctx.drawImage(enemyImage, -state.enemy.radius, -state.enemy.radius, state.enemy.radius * 2, state.enemy.radius * 2);
-          } else {
-              // Görsel yüklenmediyse yedek görseli kullan
-              ctx.drawImage(backupEnemyImage, -state.enemy.radius, -state.enemy.radius, state.enemy.radius * 2, state.enemy.radius * 2);
-          }
-          
-          ctx.restore();
-          
-          // Yaşam çubuğu düzgün oranla gösteriliyor
-          const healthRatio = state.enemy.health / enemyType.health;
-          ctx.fillStyle = '#2ecc71';
-          ctx.fillRect(
-              state.enemy.x - state.enemy.radius, 
-              state.enemy.y - state.enemy.radius - 10, 
-              state.enemy.radius * 2 * healthRatio, 
-              3
-          );
-      }
-      
-      // Mermiler
-      for (const bullet of state.bullets) {
-          ctx.beginPath();
-          ctx.arc(bullet.x, bullet.y, bullet.radius, 0, Math.PI * 2);
-          ctx.fillStyle = bullet.color;
-          ctx.fill();
-      }
-      
-      // Parçacıklar
-      for (const particle of state.particles) {
-          ctx.beginPath();
-          ctx.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
-          ctx.fillStyle = particle.color;
-          ctx.fill();
-      }
-  }
+        function updateUI() {
+            healthDisplay.textContent = `Health: ${Math.max(0, Math.floor(player.health))}%`;
+            scoreDisplay.textContent = `Score: ${state.score}`;
+            weaponDisplay.textContent = `Weapon: ${weapons[player.weapon].name}`;
+            
+            if (player.weapon === 'pistol') {
+                ammoDisplay.textContent = `Ammo: ∞`;
+            } else {
+                ammoDisplay.textContent = `Ammo: ${player.ammo}`;
+            }
+        }
 
-  // Oyun sonu
-  function gameOver() {
-      state.gameRunning = false;
-      gameOverScreen.style.display = 'flex';
-      finalScoreDisplay.textContent = `Score: ${state.score}`;
-      playSound('gameOverSound', 0.8);
-  }
+        // Çizim fonksiyonların yapması
+        function draw() {
+            ctx.fillStyle = '#222';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.save();
+            ctx.translate(player.x, player.y);
+            
+            ctx.beginPath();
+            ctx.arc(0, 0, player.radius, 0, Math.PI * 2);
+            ctx.fillStyle = player.color;
+            ctx.fill();
+            
+            const angle = Math.atan2(player.direction.y, player.direction.x);
+            ctx.beginPath();
+            ctx.moveTo(player.radius * Math.cos(angle), player.radius * Math.sin(angle));
+            ctx.lineTo(player.radius * Math.cos(angle + 2.5), player.radius * Math.sin(angle + 2.5));
+            ctx.lineTo(player.radius * Math.cos(angle - 2.5), player.radius * Math.sin(angle - 2.5));
+            ctx.closePath();
+            ctx.fillStyle = "#ffffff";
+            ctx.fill();
+            
+            ctx.restore();
+            
+            if (state.enemy) {
+                ctx.save();
+                ctx.translate(state.enemy.x, state.enemy.y);
+                
+                if (enemyImageLoaded) {
+                    ctx.drawImage(enemyImage, -state.enemy.radius, -state.enemy.radius, state.enemy.radius * 2, state.enemy.radius * 2);
+                } else {
+                    ctx.drawImage(backupEnemyImage, -state.enemy.radius, -state.enemy.radius, state.enemy.radius * 2, state.enemy.radius * 2);
+                }
+                
+                ctx.restore();
+                
+                const healthRatio = state.enemy.health / enemyType.health;
+                ctx.fillStyle = '#2ecc71';
+                ctx.fillRect(
+                    state.enemy.x - state.enemy.radius, 
+                    state.enemy.y - state.enemy.radius - 10, 
+                    state.enemy.radius * 2 * healthRatio, 
+                    3
+                );
+            }
+            
+            for (const bullet of state.bullets) {
+                ctx.beginPath();
+                ctx.arc(bullet.x, bullet.y, bullet.radius, 0, Math.PI * 2);
+                ctx.fillStyle = bullet.color;
+                ctx.fill();
+            }
+            
+            for (const particle of state.particles) {
+                ctx.beginPath();
+                ctx.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
+                ctx.fillStyle = particle.color;
+                ctx.fill();
+            }
+        }
 
-  // Oyun kazanma
-  function winGame() {
-      state.gameRunning = false;
-      winScreen.style.display = 'flex';
-      winScoreDisplay.textContent = `Score: ${state.score}`;
-      playSound('winSound', 0.8);
-  }
+        // Oyun sonu funkisyonu
+        function gameOver() {
+            state.gameRunning = false;
+            gameOverScreen.style.display = 'flex';
+            finalScoreDisplay.textContent = `Score: ${state.score}`;
+            playSound('gameOverSound', 0.8);
+            stopBackgroundMusic();
+        }
 
-  // Yeniden başlatma
-  function restartGame() {
-      state.gameRunning = true;
-      state.score = 0;
-      state.enemy = null;
-      state.bullets = [];
-      state.particles = [];
-      state.lastEnemySpawnTime = 0;
-      
-      player.x = canvas.width / 2;
-      player.y = canvas.height / 2;
-      player.health = player.maxHealth;
-      player.weapon = 'pistol';
-      player.ammo = weapons.pistol.ammo;
-      
-      gameOverScreen.style.display = 'none';
-      winScreen.style.display = 'none';
-      
-      updateUI();
-  }
+        // Oyun kazanma funkisyonu
+        function winGame() {
+            state.gameRunning = false;
+            winScreen.style.display = 'flex';
+            winScoreDisplay.textContent = `Score: ${state.score}`;
+            playSound('winSound', 0.8);
+            stopBackgroundMusic();
+        }
 
-  // Oyun döngüsü
-  function gameLoop() {
-      update();
-      draw();
-      
-      // Parçacıkları animasyon yap
-      for (const particle of state.particles) {
-          if (particle.rotationSpeed) {
-              particle.rotation += particle.rotationSpeed;
-          }
-      }
-      
-      requestAnimationFrame(gameLoop);
-  }
+        // Yeniden başlatma funkisyonu
+        function restartGame() {
+            state.gameRunning = true;
+            state.score = 0;
+            state.enemy = null;
+            state.bullets = [];
+            state.particles = [];
+            state.lastEnemySpawnTime = 0;
+            
+            player.x = canvas.width / 2;
+            player.y = canvas.height / 2;
+            player.health = player.maxHealth;
+            player.weapon = 'pistol';
+            player.ammo = weapons.pistol.ammo;
+            
+            gameOverScreen.style.display = 'none';
+            winScreen.style.display = 'none';
+            
+            updateUI();
+            playBackgroundMusic();
+        }
 
-  // Oyun başlat
-  restartGame();
-  gameLoop();
+        // Oyun döngüsü
+        function gameLoop() {
+            update();
+            draw();
+            
+            for (const particle of state.particles) {
+                if (particle.rotationSpeed) {
+                    particle.rotation += particle.rotationSpeed;
+                }
+            }
+            
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Oyun başlatması
+        restartGame();
+        gameLoop();
