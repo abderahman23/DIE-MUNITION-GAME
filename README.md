@@ -16,9 +16,9 @@ WASD tuşlarını kullanarak hareket edin.
 Fare ile nişan alın ve sol tıklama ile ateş edin.
 1, 2, 3 tuşlarıyla silahlarınız arasında geçiş yapın:
 
-1: Pistol - Sonsuz cephane, orta seviye hasar
-2: Shotgun - Sınırlı cephane, geniş atış açısı
-3: Machine Gun - Sınırlı cephane, hızlı atış
+1: Pistol - Sonsuz cephane, orta seviye hasar</br>
+2: Shotgun - Sınırlı cephane, geniş atış açısı</br>
+3: Machine Gun - Sınırlı cephane, hızlı atış</br>
 
 
 
