@@ -27,5 +27,5 @@ Hedef
 
 ![image](https://github.com/user-attachments/assets/077637f7-9389-4dd1-aae7-7869af980270)
 ### 📺 Oyunun Tanıtım Videosu
-👉 [YouTube’da İzle](https://youtu.be/2McUE_8YmFA)<br><br>
+
 🎮 [Oyunu Şimdi Oyna!](https://abderahman23.github.io/DIE-MUNITION-GAME/)
